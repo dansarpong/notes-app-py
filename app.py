@@ -1,10 +1,38 @@
+import os
 import datetime
 import hashlib
 from flask import Flask, render_template, redirect, url_for, request
+from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
+import pymysql
+
+load_dotenv()
+
+DATABASE_USER = os.getenv("DATABASE_USER")
+DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
+DATABASE_HOST = os.getenv("DATABASE_HOST")
+DATABASE_PORT = os.getenv("DATABASE_PORT", 3306)
+DATABASE_NAME = os.getenv("DATABASE_NAME")
+
+connection = pymysql.connect(
+    host=DATABASE_HOST,
+    user=DATABASE_USER,
+    password=DATABASE_PASSWORD,
+    port=int(DATABASE_PORT)
+)
+try:
+    with connection.cursor() as cursor:
+        cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DATABASE_NAME}")
+    connection.commit()
+finally:
+    connection.close()
+
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
+app.config['SQLALCHEMY_DATABASE_URI'] = (
+    f"mysql+pymysql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
@@ -228,4 +256,6 @@ def delete_section(notebook_id, note_id, section_id):
 
 
 if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
